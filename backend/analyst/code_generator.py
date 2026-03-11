@@ -58,6 +58,39 @@ def generate_code(
     Generate pandas/plotly code from user question.
     Returns clean executable code string; caller injects df and runs in sandbox.
     """
+    # For some modes, use deterministic code to avoid LLM hallucinations.
+    if mode == "find_anomalies":
+        numeric = schema.get("numeric_columns", []) or []
+        # Prefer a revenue-like column first if present.
+        preferred = None
+        for cand in ["revenue", "sales", "amount", "total", "value"]:
+            if cand in numeric:
+                preferred = cand
+                break
+        target = preferred or (numeric[0] if numeric else None)
+
+        return (
+            "target_col = " + (repr(target) if target else "None") + "\n"
+            "if target_col is None:\n"
+            "    result = \"No numeric columns found to detect outliers.\"\n"
+            "    fig = None\n"
+            "else:\n"
+            "    s = pd.to_numeric(df[target_col], errors='coerce')\n"
+            "    mean_val = s.mean()\n"
+            "    std_val = s.std()\n"
+            "    if std_val == 0 or pd.isna(std_val):\n"
+            "        result = f\"No variation in {target_col}; cannot compute outliers.\"\n"
+            "        fig = px.histogram(df, x=target_col, title=f\"Distribution of {target_col}\")\n"
+            "    else:\n"
+            "        z = (s - mean_val) / std_val\n"
+            "        out_mask = z.abs() > 3\n"
+            "        outliers = df.loc[out_mask].copy()\n"
+            "        outliers['z_score'] = z[out_mask].round(2)\n"
+            "        outliers = outliers.sort_values('z_score', ascending=False)\n"
+            "        result = outliers.head(50)\n"
+            "        fig = px.box(df, y=target_col, points='all', title=f\"Outliers in {target_col} (box plot)\")\n"
+        )
+
     client = get_ollama_client()
     schema_str = _schema_context(schema)
     mode_hint = {

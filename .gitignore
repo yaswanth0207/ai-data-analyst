@@ -15,6 +15,7 @@ ai-data-analyst/.env
 
 # Local databases / caches
 ai-data-analyst/chroma_db/
+chroma_db/
 
 # OS
 .DS_Store
