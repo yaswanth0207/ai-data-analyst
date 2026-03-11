@@ -4,13 +4,15 @@ from backend.agent.graph import build_agent_graph
 
 
 def test_agent_workflow_runs_with_mocked_codegen(monkeypatch):
-    # Avoid calling Ollama in tests by mocking code generation to deterministic code.
+    # Avoid calling Ollama in tests by mocking code generation and answer generation.
     from backend.analyst import code_generator
+    from backend.agent import nodes
 
     def fake_generate_code(user_question: str, schema: dict, mode: str) -> str:
         return "result = df['revenue'].sum()"
 
     monkeypatch.setattr(code_generator, "generate_code", fake_generate_code)
+    monkeypatch.setattr(nodes, "generate_answer", lambda state: {"final_answer": "ok"})
 
     df = pd.DataFrame({"revenue": [10, 20, 30]})
     schema = {"columns": ["revenue"], "numeric_columns": ["revenue"], "categorical_columns": [], "date_columns": []}
