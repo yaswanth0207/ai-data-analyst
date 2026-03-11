@@ -31,13 +31,13 @@ This document is a high-signal walkthrough of the **AI Data Analyst Agent** proj
 flowchart LR
   U[User] --> S[Streamlit UI]
   S -->|/upload| API[FastAPI]
-  API --> SI[Schema Inspector<br/>(pandas)]
+  API --> SI[Schema Inspector (pandas)]
   API -->|/analyze| LG[LangGraph Agent]
-  LG --> R[Route mode<br/>analyze/visualize/summarize/anomaly]
-  R --> CG[Code Generator<br/>(Ollama or deterministic)]
-  CG --> EX[Sandbox Executor<br/>(exec in restricted namespace)]
-  EX --> ANS[Answer<br/>(LLM or deterministic)]
-  API --> MEM[ChromaDB<br/>similar queries]
+  LG --> R[Route mode: analyze/visualize/summarize/anomaly]
+  R --> CG[Code Generator (Ollama or deterministic)]
+  CG --> EX[Sandbox Executor (restricted exec)]
+  EX --> ANS[Answer (LLM or deterministic)]
+  API --> MEM[ChromaDB similar queries]
   API --> PDF[ReportLab PDF]
   API --> S
 ```
