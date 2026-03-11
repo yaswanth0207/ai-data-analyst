@@ -7,6 +7,8 @@ import re
 from difflib import get_close_matches
 from typing import Any, Literal
 
+import numpy as np
+import pandas as pd
 from langchain_ollama import ChatOllama
 
 from backend.agent.state import AgentState
@@ -127,6 +129,46 @@ def _friendly_error_message(error_text: str, schema: dict[str, Any]) -> str:
     return f"The analysis failed while running generated code. Error: {error_text}"
 
 
+def _deterministic_anomaly_answer(df: pd.DataFrame, schema: dict[str, Any]) -> str:
+    """Deterministic explanation for find_anomalies mode (z-score > 3)."""
+    numeric = schema.get("numeric_columns") or df.select_dtypes(include="number").columns.tolist()
+    target = None
+    for cand in ["revenue", "sales", "amount", "total", "value"]:
+        if cand in numeric:
+            target = cand
+            break
+    target = target or (numeric[0] if numeric else None)
+    if target is None:
+        return "No numeric columns found, so I can't detect outliers."
+
+    s = pd.to_numeric(df[target], errors="coerce")
+    mean_val = float(s.mean())
+    std_val = float(s.std())
+    if std_val == 0 or np.isnan(std_val):
+        return f"No variation in '{target}', so I can't compute outliers."
+
+    z = (s - mean_val) / std_val
+    out_mask = z.abs() > 3
+    outliers = df.loc[out_mask].copy()
+    outliers["z_score"] = z[out_mask].round(2)
+    outliers = outliers.sort_values("z_score", ascending=False)
+
+    n_out = int(outliers.shape[0])
+    if n_out == 0:
+        return f"No outliers detected in '{target}' using z-score > 3 (mean={mean_val:.2f}, std={std_val:.2f})."
+
+    cols_to_show = [c for c in ["order_id", "order_date", "product", "region", target, "z_score"] if c in outliers.columns]
+    top = outliers[cols_to_show].head(3)
+    lines = [
+        f"Detected {n_out} outlier(s) in '{target}' using z-score > 3 (mean={mean_val:.2f}, std={std_val:.2f}).",
+        "Top outlier(s):",
+    ]
+    for _, row in top.iterrows():
+        parts = [f"{c}={row[c]}" for c in cols_to_show]
+        lines.append("- " + ", ".join(parts))
+    return "\n".join(lines)
+
+
 def check_error(state: AgentState) -> Literal["generate_answer", "fix_code"]:
     """Route: if error and retry_count < 2 -> fix_code, else -> generate_answer."""
     err = state.get("error")
@@ -173,6 +215,8 @@ def generate_answer(state: AgentState) -> dict[str, Any]:
     err = state.get("error")
     schema = state.get("schema") or {}
     code = state.get("generated_code") or ""
+    mode = state.get("mode") or "analyze"
+    df = state.get("dataframe")
     client = ChatOllama(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         model=os.getenv("OLLAMA_MODEL", "llama3.2"),
@@ -183,8 +227,10 @@ def generate_answer(state: AgentState) -> dict[str, Any]:
     if err:
         # Deterministic, user-friendly errors with suggestions.
         return {"final_answer": _friendly_error_message(err, schema)}
-    else:
-        prompt = f"The user asked: {question}\n\nCode result (or description): {result}\n\nProvide a clear, plain-English answer summarizing the result. If there is a table/chart, describe what it shows."
+    if mode == "find_anomalies" and df is not None:
+        # Deterministic anomaly explanation (avoid LLM hallucinations).
+        return {"final_answer": _deterministic_anomaly_answer(df, schema)}
+    prompt = f"The user asked: {question}\n\nCode result (or description): {result}\n\nProvide a clear, plain-English answer summarizing the result. If there is a table/chart, describe what it shows."
     resp = client.invoke(
         [
             SystemMessage(content="You are a helpful data analyst. Answer in plain English, concisely."),
