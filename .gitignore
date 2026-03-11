@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenvs
+venv/
+.venv/
+ai-data-analyst/venv/
+
+# Env files / secrets
+.env
+ai-data-analyst/.env
+
+# Local databases / caches
+ai-data-analyst/chroma_db/
+
+# OS
+.DS_Store
+
