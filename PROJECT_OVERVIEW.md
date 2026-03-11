@@ -28,11 +28,11 @@ This document is a high-signal walkthrough of the **AI Data Analyst Agent** proj
 ## Architecture (how requests flow)
 
 ```mermaid
-flowchart LR
+graph LR
   U[User] --> S[Streamlit UI]
-  S -->|/upload| API[FastAPI]
+  S -->|upload| API[FastAPI]
   API --> SI[Schema Inspector (pandas)]
-  API -->|/analyze| LG[LangGraph Agent]
+  API -->|analyze| LG[LangGraph Agent]
   LG --> R[Route mode: analyze/visualize/summarize/anomaly]
   R --> CG[Code Generator (Ollama or deterministic)]
   CG --> EX[Sandbox Executor (restricted exec)]
