@@ -1,0 +1,9 @@
+[server]
+# Keep the app local to avoid XSRF-triggered 403s on uploads when opened via LAN URL.
+address = "localhost"
+port = 8501
+
+# If you intentionally access the app from another device on your LAN,
+# you can set address = "0.0.0.0" and keep this false.
+enableXsrfProtection = false
+
