@@ -31,7 +31,7 @@ This document is a high-signal walkthrough of the **AI Data Analyst Agent** proj
 graph LR
   U[User] --> S[Streamlit UI]
   S -->|upload| API[FastAPI]
-  API --> SI[Schema Inspector (pandas)]
+  API --> SI[Schema Inspector]
   API -->|analyze| LG[LangGraph Agent]
   LG --> R[Route mode: analyze/visualize/summarize/anomaly]
   R --> CG[Code Generator (Ollama or deterministic)]
