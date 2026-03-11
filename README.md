@@ -98,7 +98,7 @@ Example questions to try:
 flowchart LR
   U[User] -->|CSV upload / questions| S[Streamlit UI]
   S -->|HTTP| API[FastAPI]
-  API -->|load + schema| INS[Schema Inspector]
+  API -->|load + schema| INS[Schema Inspector<br/>(pandas)]
   API -->|invoke| LG[LangGraph Agent]
   LG --> RT[Router]
   RT --> CG[Ollama Code Generator]
